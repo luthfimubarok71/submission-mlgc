@@ -1,7 +1,7 @@
 const predictClassification = require("../services/inferenceServices");
 const crypto = require("crypto");
 const InputError = require('../exceptions/InputError');
-const storeData = require("../services/storeData");
+const { storeData, predictCollection } = require("../services/storeData");
 
 async function postPredictHandler(request, h) {
   const { image } = request.payload;
@@ -13,7 +13,7 @@ async function postPredictHandler(request, h) {
     const createdAt = new Date().toISOString();
 
     if (!result || typeof scoreResult !== 'number') {
-      throw new Error("Invalid result or score");      
+      throw new InputError("Invalid result or score");      
     }
 
     const data = {
@@ -42,4 +42,31 @@ async function postPredictHandler(request, h) {
   }
 }
 
-module.exports = postPredictHandler;
+async function getPredictHistoryHandler(request, h) {
+  try {
+    const hystory = (await predictCollection.get()).docs.map((doc) => doc.data());
+    const data = hystory.map((item) => ({
+      id: item.id,
+      history: item,
+    }));
+    console.log(data);
+    
+    
+    const response = h.response({
+      status: "success",
+      data
+    })
+    response.code(200);
+    return response;
+
+  } catch (error) {
+    const response = h.response({
+      status: "fail",
+      message: "Terjadi kesalahan dalam mengambil data history"
+    })
+    response.code(400);
+    return response;
+  }
+}
+
+module.exports = { getPredictHistoryHandler, postPredictHandler };
